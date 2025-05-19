@@ -7,9 +7,11 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\MassPrunable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Spatie\WebhookClient\Exceptions\InvalidConfig;
 use Spatie\WebhookClient\WebhookConfig;
 use Symfony\Component\HttpFoundation\HeaderBag;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Class WebhookCall
@@ -53,36 +55,9 @@ class WebhookCall extends Model
         // Get basic payload data
         $payload = $request->input();
 
-        // Process and store file attachments
-        if ($request->allFiles()) {
-            $storedFiles = [];
-
-            foreach ($request->allFiles() as $key => $uploadedFiles) {
-                $files = is_array($uploadedFiles) ? $uploadedFiles : [$uploadedFiles];
-
-                foreach ($files as $index => $file) {
-                    $originalName = $file->getClientOriginalName();
-                    $extension = $file->getClientOriginalExtension();
-                    $mimeType = $file->getMimeType();
-                    $size = $file->getSize();
-
-                    // Generate unique filename
-                    $filename = md5(uniqid() . $originalName) . '.' . $extension;
-
-                    // Store file to storage/app/webhooks directory (or specify your preferred disk)
-                    $storagePath = $file->storeAs('webhooks', $filename);
-
-                    $storedFiles[] = [
-                        'original_name' => $originalName,
-                        'storage_path' => $storagePath,
-                        'mime_type' => $mimeType,
-                        'size' => $size,
-                        'field_name' => $key,
-                    ];
-                }
-            }
-
-            $payload['attachments'] = $storedFiles;
+        // Add all files directly to the payload to maintain compatibility
+        if ($files = $request->allFiles()) {
+            $payload['attachments'] = array_values($files);
         }
 
         return self::create([
