@@ -50,11 +50,41 @@ class WebhookCall extends Model
     {
         $headers = self::headersToStore($config, $request);
 
+        // Combine input data with file uploads
+        $payload = $request->input();
+
+        // Add files to payload if they exist
+        if ($request->allFiles()) {
+            $files = [];
+            foreach ($request->allFiles() as $key => $file) {
+                if (is_array($file)) {
+                    $files[$key] = [];
+                    foreach ($file as $fileKey => $fileValue) {
+                        $files[$key][$fileKey] = [
+                            'name' => $fileValue->getClientOriginalName(),
+                            'type' => $fileValue->getMimeType(),
+                            'size' => $fileValue->getSize(),
+                            'path' => $fileValue->getRealPath(),
+                        ];
+                    }
+                } else {
+                    $files[$key] = [
+                        'name' => $file->getClientOriginalName(),
+                        'type' => $file->getMimeType(),
+                        'size' => $file->getSize(),
+                        'path' => $file->getRealPath(),
+                    ];
+                }
+            }
+
+            $payload['_files'] = $files;
+        }
+
         return self::create([
             'name' => $config->name,
             'url' => $request->fullUrl(),
             'headers' => $headers,
-            'payload' => $request->input(),
+            'payload' => $payload,
             'exception' => null,
         ]);
     }
@@ -67,13 +97,10 @@ class WebhookCall extends Model
             return $request->headers->all();
         }
 
-        $headerNamesToStore = array_map(
-            fn (string $headerName) => strtolower($headerName),
-            $headerNamesToStore,
-        );
+        $headerNamesToStore = array_map(fn(string $headerName) => strtolower($headerName), $headerNamesToStore);
 
         return collect($request->headers->all())
-            ->filter(fn (array $headerValue, string $headerName) => in_array($headerName, $headerNamesToStore))
+            ->filter(fn(array $headerValue, string $headerName) => in_array($headerName, $headerNamesToStore))
             ->toArray();
     }
 
@@ -113,7 +140,7 @@ class WebhookCall extends Model
     {
         $days = config('webhook-client.delete_after_days');
 
-        if (! is_int($days)) {
+        if (!is_int($days)) {
             throw InvalidConfig::invalidPrunable($days);
         }
 
