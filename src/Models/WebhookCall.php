@@ -7,11 +7,9 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\MassPrunable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
-use Illuminate\Http\UploadedFile;
 use Spatie\WebhookClient\Exceptions\InvalidConfig;
 use Spatie\WebhookClient\WebhookConfig;
 use Symfony\Component\HttpFoundation\HeaderBag;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * Class WebhookCall
@@ -52,12 +50,12 @@ class WebhookCall extends Model
     {
         $headers = self::headersToStore($config, $request);
 
-        // Get basic payload data
+        // Get basic input data
         $payload = $request->input();
 
-        // Add all files directly to the payload to maintain compatibility
-        if ($files = $request->allFiles()) {
-            $payload['attachments'] = array_values($files);
+        // Add files directly to payload if they exist
+        if ($request->allFiles()) {
+            $payload['attachments'] = $request->allFiles();
         }
 
         return self::create([
