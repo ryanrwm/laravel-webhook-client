@@ -60,10 +60,6 @@ class WebhookCall extends Model
             foreach ($request->allFiles() as $key => $uploadedFiles) {
                 $files = is_array($uploadedFiles) ? $uploadedFiles : [$uploadedFiles];
 
-                if (!isset($storedFiles[$key])) {
-                    $storedFiles[$key] = [];
-                }
-
                 foreach ($files as $index => $file) {
                     $originalName = $file->getClientOriginalName();
                     $extension = $file->getClientOriginalExtension();
@@ -76,11 +72,12 @@ class WebhookCall extends Model
                     // Store file to storage/app/webhooks directory (or specify your preferred disk)
                     $storagePath = $file->storeAs('webhooks', $filename);
 
-                    $storedFiles[$key][] = [
+                    $storedFiles[] = [
                         'original_name' => $originalName,
                         'storage_path' => $storagePath,
                         'mime_type' => $mimeType,
                         'size' => $size,
+                        'field_name' => $key,
                     ];
                 }
             }
