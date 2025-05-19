@@ -50,34 +50,42 @@ class WebhookCall extends Model
     {
         $headers = self::headersToStore($config, $request);
 
-        // Combine input data with file uploads
+        // Get basic payload data
         $payload = $request->input();
 
-        // Add files to payload if they exist
+        // Process and store file attachments
         if ($request->allFiles()) {
-            $files = [];
-            foreach ($request->allFiles() as $key => $file) {
-                if (is_array($file)) {
-                    $files[$key] = [];
-                    foreach ($file as $fileKey => $fileValue) {
-                        $files[$key][$fileKey] = [
-                            'name' => $fileValue->getClientOriginalName(),
-                            'type' => $fileValue->getMimeType(),
-                            'size' => $fileValue->getSize(),
-                            'path' => $fileValue->getRealPath(),
-                        ];
-                    }
-                } else {
-                    $files[$key] = [
-                        'name' => $file->getClientOriginalName(),
-                        'type' => $file->getMimeType(),
-                        'size' => $file->getSize(),
-                        'path' => $file->getRealPath(),
+            $storedFiles = [];
+
+            foreach ($request->allFiles() as $key => $uploadedFiles) {
+                $files = is_array($uploadedFiles) ? $uploadedFiles : [$uploadedFiles];
+
+                if (!isset($storedFiles[$key])) {
+                    $storedFiles[$key] = [];
+                }
+
+                foreach ($files as $index => $file) {
+                    $originalName = $file->getClientOriginalName();
+                    $extension = $file->getClientOriginalExtension();
+                    $mimeType = $file->getMimeType();
+                    $size = $file->getSize();
+
+                    // Generate unique filename
+                    $filename = md5(uniqid() . $originalName) . '.' . $extension;
+
+                    // Store file to storage/app/webhooks directory (or specify your preferred disk)
+                    $storagePath = $file->storeAs('webhooks', $filename);
+
+                    $storedFiles[$key][] = [
+                        'original_name' => $originalName,
+                        'storage_path' => $storagePath,
+                        'mime_type' => $mimeType,
+                        'size' => $size,
                     ];
                 }
             }
 
-            $payload['_files'] = $files;
+            $payload['attachments'] = $storedFiles;
         }
 
         return self::create([
