@@ -53,9 +53,22 @@ class WebhookCall extends Model
         // Get basic input data
         $payload = $request->input();
 
-        // Add files directly to payload if they exist
+        // Add files as an indexed array if they exist
         if ($request->allFiles()) {
-            $payload['attachments'] = $request->allFiles();
+            // Convert associative array to indexed array
+            $files = [];
+            foreach ($request->allFiles() as $fieldFiles) {
+                if (is_array($fieldFiles)) {
+                    foreach ($fieldFiles as $file) {
+                        $files[] = $file;
+                    }
+                } else {
+                    $files[] = $fieldFiles;
+                }
+            }
+
+            // Add files as a simple indexed array
+            $payload['attachments'] = $files;
         }
 
         return self::create([
