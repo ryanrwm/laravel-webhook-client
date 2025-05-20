@@ -60,10 +60,22 @@ class WebhookCall extends Model
             foreach ($request->allFiles() as $fieldFiles) {
                 if (is_array($fieldFiles)) {
                     foreach ($fieldFiles as $file) {
-                        $files[] = $file;
+                        $files[] = [
+                            'originalName' => $file->getClientOriginalName(),
+                            'mimeType' => $file->getMimeType(),
+                            'size' => $file->getSize(),
+                            'error' => $file->getError(),
+                            'path' => $file->getPathname(),
+                        ];
                     }
                 } else {
-                    $files[] = $fieldFiles;
+                    $files[] = [
+                        'originalName' => $fieldFiles->getClientOriginalName(),
+                        'mimeType' => $fieldFiles->getMimeType(),
+                        'size' => $fieldFiles->getSize(),
+                        'error' => $fieldFiles->getError(),
+                        'path' => $fieldFiles->getPathname(),
+                    ];
                 }
             }
 
