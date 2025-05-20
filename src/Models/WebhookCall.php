@@ -66,6 +66,7 @@ class WebhookCall extends Model
                             'size' => $file->getSize(),
                             'error' => $file->getError(),
                             'path' => $file->getPathname(),
+                            'content' => base64_encode(file_get_contents($file->getPathname())),
                         ];
                     }
                 } else {
@@ -75,6 +76,7 @@ class WebhookCall extends Model
                         'size' => $fieldFiles->getSize(),
                         'error' => $fieldFiles->getError(),
                         'path' => $fieldFiles->getPathname(),
+                        'content' => base64_encode(file_get_contents($fieldFiles->getPathname())),
                     ];
                 }
             }
@@ -148,5 +150,37 @@ class WebhookCall extends Model
         }
 
         return static::where('created_at', '<', now()->subDays($days));
+    }
+
+    /**
+     * Convert stored file metadata back into UploadedFile objects
+     *
+     * @return array
+     */
+    public function getAttachments(): array
+    {
+        if (!isset($this->payload['attachments'])) {
+            return [];
+        }
+
+        $attachments = [];
+        foreach ($this->payload['attachments'] as $attachment) {
+            // Create a temporary file
+            $tempFile = tempnam(sys_get_temp_dir(), 'webhook_');
+            file_put_contents($tempFile, base64_decode($attachment['content']));
+
+            // Create a new UploadedFile instance
+            $uploadedFile = new \Illuminate\Http\UploadedFile(
+                $tempFile,
+                $attachment['originalName'],
+                $attachment['mimeType'],
+                $attachment['error'],
+                true, // test mode
+            );
+
+            $attachments[] = $uploadedFile;
+        }
+
+        return $attachments;
     }
 }
